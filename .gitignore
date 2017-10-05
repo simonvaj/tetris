@@ -1,0 +1,7 @@
+
+# Saved binary files by numpy
+*.npz
+
+# Compiled files
+*.pyc
+
