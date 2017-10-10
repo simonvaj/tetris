@@ -1,14 +1,27 @@
+"""A fun and family-friendly tetris game!"""
 import Tkinter as tk
 import tkFont
 import random
 import time
 import numpy as np
-from utils import *
-from tetromino import *
+import tetromino
 
+NUM_ROWS = 25
+NUM_COLS = 12
+BOX_WIDTH = 20
+CANVAS_WIDTH = BOX_WIDTH * NUM_COLS
+CANVAS_HEIGHT = BOX_WIDTH * NUM_ROWS
+SCREEN_WIDTH = 2 * CANVAS_WIDTH
+SCREEN_HEIGHT = CANVAS_HEIGHT + 22
+DEFAULT_TIME_STEP = 300
+TIME_STEP_REDUCE = 0.9995
+MIN_TIME_STEP = 200
+SAVED_STATE_NAME = 'save'
 dt = DEFAULT_TIME_STEP
-        
+
 class Tetris(tk.Frame):
+    """The main tetris window class! RUns the tetris game and updates
+    tetrominos."""
 
     def __init__(self, master, **kwargs):
         tk.Frame.__init__(self, master, **kwargs)
@@ -16,18 +29,20 @@ class Tetris(tk.Frame):
         self.master = master
         self.nrows = NUM_ROWS
         self.ncols = NUM_COLS
-        self.rects = [[None for i in range(self.ncols)] for j in range(self.nrows)]
+        #pylint: disable=unused-variable
+        self.rects = [[None for i in range(self.ncols)]
+                            for j in range(self.nrows)]
         self.curtetromino = None
         self.iters = 0
-        
+
         canvas_frame = tk.Frame(master, relief=tk.GROOVE, borderwidth=4, width=CANVAS_WIDTH + 6, height=CANVAS_HEIGHT + 6)
         self.canvas = tk.Canvas(canvas_frame, bg='white', width=CANVAS_WIDTH, height=CANVAS_HEIGHT)
         self.create_grid()
         self.canvas.pack(fill=tk.BOTH)
         canvas_frame.pack(fill=tk.BOTH, side=tk.LEFT, padx=5, pady=5)
-        
+
         info_frame = tk.Frame(self, relief=tk.RAISED)
-        
+
         points_frame = tk.Frame(info_frame, relief=tk.GROOVE, borderwidth=3)
         ptfont = tkFont.Font(family="Helvetica", size=14, weight="bold")
         plbl = tk.Label(points_frame, text='Points: ', font=ptfont)
@@ -39,31 +54,32 @@ class Tetris(tk.Frame):
         self.npts_str.set("0")
         points_frame.pack(ipadx=5, ipady=5)
         info_frame.pack(side=tk.RIGHT, fill=tk.BOTH, pady=40)
-  
+
         self.iters = 0
         self.loop = 0
         self.dead_blocks = [[None for i in xrange(self.ncols)] for j in xrange(self.nrows)]
         self.dt = DEFAULT_TIME_STEP
-        
+
         self.keydown_wait_time = 0.5
         self.start_time = time.time()
-        
+
         self.pause_on = False
-        
+
         self.points = 0
         self.level = 0
 
     def center_window(self):
-        sw = self.master.winfo_screenwidth()
-        sh = self.master.winfo_screenheight()
-          
-        x = (sw - SCREEN_WIDTH)/2
-        y = (sh - SCREEN_HEIGHT)/2
-        self.master.geometry('%dx%d+%d+%d' % (SCREEN_WIDTH, SCREEN_HEIGHT, x, y))
-        
+        """Set the window in the center of the screen."""
+        screen_width = self.master.winfo_screenwidth()
+        screen_height = self.master.winfo_screenheight()
+
+        xpos = (screen_width - SCREEN_WIDTH)/2
+        ypos = (screen_height - SCREEN_HEIGHT)/2
+        self.master.geometry('%dx%d+%d+%d' % (SCREEN_WIDTH, SCREEN_HEIGHT, xpos, ypos))
+
     def run(self):
         self.after(dt, self.update) 
-    
+
     def create_grid(self):
         OFFSET = 0.02 * BOX_WIDTH
         for i in xrange(self.nrows):
@@ -78,38 +94,38 @@ class Tetris(tk.Frame):
         for i in xrange(self.nrows):
             for j in xrange(self.ncols):
                 self.canvas.itemconfigure(self.rects[i][j], fill='white', outline='#f8f8f8')
-                                                                
+
     def reset(self):
         self.points = 0
         self.curtetromino = None
         for i in xrange(self.nrows):
             for j in xrange(self.ncols):
                 self.dead_blocks[i][j] = None
-    
+
     def spawn_tetromino(self):
-    
+
         r = random.randint(0, 6)
         if r == 0:
-            self.curtetromino = SquareTetromino()
+            self.curtetromino = tetromino.SquareTetromino()
         elif r == 1:
-            self.curtetromino = StraightTetromino()
+            self.curtetromino = tetromino.StraightTetromino()
         elif r == 2:
-            self.curtetromino = TTetromino()
+            self.curtetromino = tetromino.TTetromino()
         elif r == 3:
-            self.curtetromino = JTetromino()
+            self.curtetromino = tetromino.JTetromino()
         elif r == 4:
-            self.curtetromino = LTetromino()
+            self.curtetromino = tetromino.LTetromino()
         elif r == 5:
-            self.curtetromino = STetromino()
+            self.curtetromino = tetromino.STetromino()
         elif r == 6:
-            self.curtetromino = ZTetromino()
-        
+            self.curtetromino = tetromino.ZTetromino()
+
     def is_game_over(self):
         for x in xrange(self.ncols):
             if self.dead_blocks[0][x] is not None:
                 return True
         return False
-                            
+
     def move_left(self):
         can_move_left = True
         for block in self.curtetromino.blocks:
@@ -117,14 +133,14 @@ class Tetris(tk.Frame):
             if x <= 0:
                 can_move_left = False
                 break
-                
+
             if self.dead_blocks[y][x - 1] is not None and x >= 1 and x < self.ncols and y >= 0 and y < self.nrows:
                 can_move_left = False
                 break
 
         if can_move_left:
             self.curtetromino.pos.x -= 1
-                   
+
     def move_right(self):
         can_move_right = True
         for block in self.curtetromino.blocks:
@@ -140,9 +156,8 @@ class Tetris(tk.Frame):
             self.curtetromino.pos.x += 1
 
     def check_collisions(self):
-        """
-        Check collisions between the current (falling) tetromino with 
-        walls, ground and other tetrominoes.
+        """Check collisions between the current (falling) tetromino with
+        walls, ground and other tetrominos.
         """
         for block in self.curtetromino.blocks:
             x, y = self.curtetromino.pos[0] + block[0], self.curtetromino.pos[1] + block[1]
@@ -153,10 +168,9 @@ class Tetris(tk.Frame):
             if x >= 0 and x < self.ncols and y >= 0 and y < self.nrows and self.dead_blocks[y][x] is not None:
                 return True
         return False
-    
+
     def check_collision_below(self):
-        """
-        Check collisions between the current (falling) tetromino with 
+        """Check collisions between the current (falling) tetromino with 
         ground and obstacles below.
         """
         for block in self.curtetromino.blocks:
@@ -168,7 +182,7 @@ class Tetris(tk.Frame):
                    y >= 0 and y < self.nrows:
                     return True
         return False
-        
+
     def check_rows(self):
         assert self.curtetromino is None
         complete_rows = []
@@ -179,7 +193,7 @@ class Tetris(tk.Frame):
                     num_dead_blocks += 1
             if num_dead_blocks == self.ncols:
                 complete_rows.append(i)
-               
+
         if len(complete_rows) == 1:
             self.points += 200
         elif len(complete_rows) == 2:
@@ -188,7 +202,7 @@ class Tetris(tk.Frame):
             self.points += 1100
         elif len(complete_rows) >= 4:
             self.points += 2000
-            
+
         for i in complete_rows:
             for j in xrange(self.ncols):
                 self.dead_blocks[i][j] = None
@@ -198,9 +212,9 @@ class Tetris(tk.Frame):
                             self.dead_blocks[k][j] = None
                         else:
                             self.dead_blocks[k][j] = self.dead_blocks[k-1][j]
-        
+
     def on_key_press(self, event):
-    
+
         if event.char == 'p':
             self.pause_on = not self.pause_on
         elif event.char == 'q':
@@ -230,8 +244,7 @@ class Tetris(tk.Frame):
                 self.check_rows()
 
             self.draw()
-        
-        
+
     def draw(self):
         self.draw_grid()
         for i in xrange(self.nrows):
@@ -245,21 +258,22 @@ class Tetris(tk.Frame):
                     self.canvas.itemconfigure(self.rects[y][x], fill=self.curtetromino.color, outline='black')
 
     def deposit_tetromino(self):
-        for b in self.curtetromino.blocks:
-            y, x = self.curtetromino.pos.y + b[1], self.curtetromino.pos.x + b[0]
-            self.dead_blocks[y][x] = self.curtetromino.color
-            
+        for block in self.curtetromino.blocks:
+            ypos, xpos = self.curtetromino.pos.y + block[1], \
+                         self.curtetromino.pos.x + block[0]
+            self.dead_blocks[ypos][xpos] = self.curtetromino.color
+
         self.curtetromino = None
-        
+
     def update(self):
-        
+
         if not self.pause_on:
             if self.curtetromino is None:
                 self.spawn_tetromino()
                 self.points += 1
             if not self.check_collision_below():
                 self.curtetromino.pos.y += 1
-            
+
             if self.check_collision_below():
                 assert self.curtetromino is not None
                 if self.is_game_over():
@@ -268,30 +282,30 @@ class Tetris(tk.Frame):
                     self.deposit_tetromino()
                     self.check_rows()
             self.draw()
-        
+
         self.dt *= TIME_STEP_REDUCE
         if self.dt < 10: self.dt = 10
         self.npts_str.set(str(self.points))
         self.after(int(self.dt), self.update)
-    
+
     def save_state(self):
         np.savez(SAVED_STATE_NAME, curtetromino=[self.curtetromino], blocks=self.dead_blocks, points=[self.points])
-        
+
     def load_state(self):
         npzfile = np.load(SAVED_STATE_NAME + '.npz')
         self.curtetromino = npzfile['curtetromino'][0]
         self.dead_blocks = npzfile['blocks']
         self.points = npzfile['points'][0]
-    
+
 def main():
     root = tk.Tk()
     root.title('Tetris')
     root.resizable(0, 0)
     game = Tetris(root)
     root.bind("<Key>", game.on_key_press)
-    game.pack()    
+    game.pack()
     game.run()
     root.mainloop()
-    
+
 if __name__ == '__main__':
     main()
