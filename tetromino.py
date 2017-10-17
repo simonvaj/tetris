@@ -1,5 +1,4 @@
 """Definitions of tetromino objects, the small pieces that are falling down!"""
-from utils import NUM_COLS
 
 TETRO_COLORMAP = [str('#%02x%02x%02x' % (70, 70, 70)),
                   str('#%02x%02x%02x' % (100, 100, 100)),
@@ -11,8 +10,10 @@ TETRO_COLORMAP = [str('#%02x%02x%02x' % (70, 70, 70)),
 
 class Position(object):
     """Simple 2-component position class."""
+# pylint: disable=too-few-public-methods
 
     def __init__(self, x, y):
+        # pylint: disable=invalid-name
         self.x = x
         self.y = y
 
@@ -31,12 +32,18 @@ class Position(object):
         else:
             assert False
 
+    def __add__(self, vec):
+        return Position(self.x + vec.x, self.y + vec.y)
+
+    def __sub__(self, vec):
+        return Position(self.x - vec.x, self.y - vec.y)
+
 class Tetromino(object):
     """A tetromino describes falling piece in tetris!"""
 
     tetro_id = 0
 
-    def __init__(self, x=NUM_COLS/2, y=-1):
+    def __init__(self, x=0, y=0):
         self.blocks = [None] * 4
         self.pos = Position(x, y)
         self.rotation = 0
@@ -57,7 +64,7 @@ class Tetromino(object):
 
 class SquareTetromino(Tetromino):
     """Square 2x2 tetromino."""
-    def __init__(self, x=NUM_COLS/2-1, y=-1):
+    def __init__(self, x=0, y=0):
         Tetromino.__init__(self, x, y)
         self.color = TETRO_COLORMAP[0]
         self.blocks[0] = 0, 0
@@ -68,7 +75,7 @@ class SquareTetromino(Tetromino):
 class StraightTetromino(Tetromino):
     """Straight tetromino has 4 blocks in a row."""
 
-    def __init__(self, x=NUM_COLS/2-1, y=-1):
+    def __init__(self, x=0, y=0):
         Tetromino.__init__(self, x, y)
         self.color = TETRO_COLORMAP[1]
         self.rotate()
@@ -93,7 +100,7 @@ class TTetromino(Tetromino):
     """Tetromino with 4 blocks, looking like a T.
     This tetromino has 4 different states."""
 
-    def __init__(self, x=NUM_COLS/2-1, y=-1):
+    def __init__(self, x=0, y=0):
         Tetromino.__init__(self, x, y)
         self.color = TETRO_COLORMAP[2]
         self.rotate()
@@ -124,7 +131,7 @@ class TTetromino(Tetromino):
 class JTetromino(Tetromino):
     """A mirrored L tetromino with 2 different states."""
 
-    def __init__(self, x=NUM_COLS/2-1, y=-1):
+    def __init__(self, x=0, y=0):
         Tetromino.__init__(self, x, y)
         self.color = TETRO_COLORMAP[3]
         self.rotate()
@@ -154,7 +161,7 @@ class JTetromino(Tetromino):
 
 class LTetromino(Tetromino):
     """An L-shaped tetromino with 2 different states."""
-    def __init__(self, x=NUM_COLS/2-1, y=-1):
+    def __init__(self, x=0, y=0):
         Tetromino.__init__(self, x, y)
         self.color = TETRO_COLORMAP[4]
         self.rotate()
@@ -185,7 +192,7 @@ class LTetromino(Tetromino):
 class ZTetromino(Tetromino):
     """An Z-shaped tetromino."""
 
-    def __init__(self, x=NUM_COLS/2-1, y=-1):
+    def __init__(self, x=0, y=0):
         Tetromino.__init__(self, x, y)
         self.color = TETRO_COLORMAP[5]
         self.rotate()
@@ -206,7 +213,7 @@ class ZTetromino(Tetromino):
 class STetromino(Tetromino):
     """An S-shaped tetromino."""
 
-    def __init__(self, x=NUM_COLS/2-1, y=-1):
+    def __init__(self, x=0, y=0):
         Tetromino.__init__(self, x, y)
         self.color = TETRO_COLORMAP[6]
         self.rotate()

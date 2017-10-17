@@ -72,6 +72,8 @@ class Tetris(object):
             self.curtetromino = tetromino.STetromino()
         elif r == 6:
             self.curtetromino = tetromino.ZTetromino()
+        self.curtetromino.pos = tetromino.Position(NUM_COLS/2, -1)
+
     def is_game_over(self):
         """Check if there are dead blocks at the ceiling."""
         for xpos in xrange(self.ncols):
